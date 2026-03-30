@@ -312,16 +312,38 @@ with col_note:
     st.markdown("<p style='font-size:0.77rem;color:#6B6560;margin-top:0.65rem'>PDF includes results + load schedule with IEC references.</p>",
                 unsafe_allow_html=True)
 
-# ── MASTER'S IMPACT ────────────────────────────────────────────────────────────
-st.markdown("""
-<div class="impact">
-  <h3>📚 Impact on Your German Master's Application</h3>
-  <p>This project directly strengthens applications to TU Munich, RWTH Aachen, and TU Berlin.</p>
-  <div class="ipoint"><strong>Standards literacy</strong> — IEC 60364, 60947-2, 60228, 60038 implemented correctly. German engineering culture prizes this above most things.</div>
-  <div class="ipoint"><strong>Industrial deployment</strong> — Built and used at Sapphire Fibres Ltd during your MTO role. A real tool solving a real problem.</div>
-  <div class="ipoint"><strong>Cross-disciplinary skills</strong> — Python + power systems is exactly what Elektrotechnik / Energy Engineering programmes seek.</div>
-  <div class="ipoint"><strong>Motivationsschreiben line</strong> — "I developed an IEC-compliant sizing tool deployed in a textile facility, reducing manual calculation errors for the electrical team."</div>
-  <div class="ipoint"><strong>GitHub proof</strong> — Public repo + live Streamlit URL = verifiable evidence of self-driven learning.</div>
-  <p style="margin-top:1rem;font-size:0.8rem;color:#8A8480;"><strong style="color:#C8C3BC;">Next additions:</strong> Motor starting current (IEC 60034) · Short-circuit calculator (IEC 60909)</p>
-</div>
-""", unsafe_allow_html=True)
+# ── IEC QUICK REFERENCE TABLE ──────────────────────────────────────────────────
+st.markdown("<hr style='border:none;border-top:1px solid #E2DDD6;margin:1.5rem 0'>", unsafe_allow_html=True)
+st.markdown("<p style='font-family:DM Serif Display,serif;font-size:1.1rem;color:#1A1814;margin-bottom:0.3rem'>IEC Quick Reference Table</p>", unsafe_allow_html=True)
+st.markdown("<p style='font-size:0.75rem;color:#6B6560;margin-bottom:1rem'>Copper cable · XLPE 90°C · Ambient 35°C · Grouping 0.80 · IEC 60364-5-52 / IEC 60947-2</p>", unsafe_allow_html=True)
+
+ref_data = []
+for size, ratings in CABLES.items():
+    derated   = ratings["xlpe"] * TEMP_FACTOR * GROUPING
+    req_br    = derated * 1.25
+    breaker   = next((b for b in BREAKERS if b >= req_br), BREAKERS[-1])
+    vd_3ph    = round((math.sqrt(3) * derated * (RHO_CU * 50 / size) / 415) * 100, 2)
+    vd_1ph    = round((2           * derated * (RHO_CU * 50 / size) / 230) * 100, 2)
+    ref_data.append({
+        "Cable (mm²)":          size,
+        "XLPE Rating (A)":      ratings["xlpe"],
+        "Derated Capacity (A)": round(derated, 1),
+        "Min. Breaker (A)":     breaker,
+        "VD% · 3Ph · 50m":     vd_3ph,
+        "VD% · 1Ph · 50m":     vd_1ph,
+    })
+
+ref_df = pd.DataFrame(ref_data)
+
+def highlight_row(row):
+    if row["Derated Capacity (A)"] >= r["corr_ib"] and row["Cable (mm²)"] == r["cable_mm2"]:
+        return ["background-color:#FDF0EB; font-weight:600; color:#C8440A"] * len(row)
+    return [""] * len(row)
+
+st.dataframe(
+    ref_df.style.apply(highlight_row, axis=1),
+    use_container_width=True,
+    hide_index=True,
+)
+st.markdown("<p style='font-size:0.72rem;color:#6B6560;margin-top:0.4rem'>🟠 Highlighted row = recommended size for current load input above.</p>",
+            unsafe_allow_html=True)
